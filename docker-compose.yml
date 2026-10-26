@@ -1,0 +1,44 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-events}:${POSTGRES_PASSWORD:-events}@postgres:5432/${POSTGRES_DB:-production_events}
+      JWT_SECRET: ${JWT_SECRET:-development-only-change-me}
+      SCANNER_USERNAME: ${SCANNER_USERNAME:-scanner}
+      SCANNER_PASSWORD: ${SCANNER_PASSWORD:-scanner-dev-password}
+      MANAGER_USERNAME: ${MANAGER_USERNAME:-manager}
+      MANAGER_PASSWORD: ${MANAGER_PASSWORD:-manager-dev-password}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-production_events}
+      POSTGRES_USER: ${POSTGRES_USER:-events}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-events}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U events -d production_events"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_data:
